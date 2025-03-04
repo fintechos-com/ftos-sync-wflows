@@ -1,0 +1,22 @@
+name: "Sync Workflows from Template"
+description: "Syncs only .github/workflows/ from a template repository to all derived repositories"
+
+
+inputs:
+  github_token:
+    description: "GitHub App Token"
+    required: true
+  org:
+    description: "GitHub Organization"
+    required: true
+  template_repo:
+    description: "Template Repository Name"
+    required: true
+
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  env:
+    GH_TOKEN: ${{ inputs.github_token }}
+    ORG: ${{ inputs.org }}
+    TEMPLATE_REPO: ${{ inputs.template_repo }}
