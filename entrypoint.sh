@@ -34,7 +34,11 @@ for REPO in $REPOS; do
   git commit -m "Sync workflows from template"
   git push origin update-workflows
 
-  gh pr create --title "Sync workflows from template" --body "Updating workflows from template repository" --base main --head update-workflows
+  gh pr create --title "Sync workflows from template" \
+               --body "Updating workflows from template repository" \
+               --base main \
+               --head update-workflows \
+               --label "ftos-sync-wflow"
 
   cd ..
   rm -rf $REPO
