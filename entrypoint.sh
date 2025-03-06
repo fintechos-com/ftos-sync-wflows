@@ -16,8 +16,8 @@ ALL_REPOS=()
 while :; do
   echo "Fetching page $PAGE..."
   
-  # Fetch repositories for the page, returning only name, topics, and is_template status
-  REPO_PAGE=$(gh api "orgs/$ORG/repos?per_page=$PER_PAGE&page=$PAGE" --jq '.[] | {name: .name, topics: .topics, is_template: .is_template}')
+  # Fetch repositories for the page
+  REPO_PAGE=$(gh api "orgs/$ORG/repos?per_page=$PER_PAGE&page=$PAGE" | jq -c '.[]')
 
   # Stop if no repositories are returned
   if [[ -z "$REPO_PAGE" ]]; then
@@ -25,10 +25,10 @@ while :; do
     break
   fi
 
-  # Extract repository names from JSON and append them to the array
+  # Append repositories from this page to the array
   while read -r REPO_JSON; do
     ALL_REPOS+=("$REPO_JSON")
-  done < <(echo "$REPO_PAGE" | jq -c '.') # Process line by line to avoid array issues
+  done < <(echo "$REPO_PAGE")
 
   # Move to the next page
   ((PAGE++))
@@ -37,21 +37,32 @@ done
 # Check the total number of repositories fetched
 echo "Total repositories fetched: ${#ALL_REPOS[@]}"
 
+# Debug the first few repositories to ensure they contain topics
+echo "First 5 fetched repositories:"
+for i in "${!ALL_REPOS[@]}"; do
+  if [[ $i -lt 5 ]]; then
+    echo "${ALL_REPOS[$i]}" | jq '.name, .topics, .is_template'
+  fi
+done
+
+# Normalize the topic to lowercase (GitHub API topics are always lowercase)
+TOPIC_LOWER=$(echo "$TOPIC" | tr '[:upper:]' '[:lower:]')
+
 # Filter repositories based on topic and is_template=false
 SELECTED_REPOS=()
 for REPO_JSON in "${ALL_REPOS[@]}"; do
   REPO_NAME=$(echo "$REPO_JSON" | jq -r '.name')
-  TOPICS=$(echo "$REPO_JSON" | jq -r '.topics | join(",")')
+  TOPICS=$(echo "$REPO_JSON" | jq -r '[.topics[]?] | map(ascii_downcase) | join(",")')
   IS_TEMPLATE=$(echo "$REPO_JSON" | jq -r '.is_template')
 
-  if [[ "$IS_TEMPLATE" == "false" && "$TOPICS" == *"$TOPIC"* ]]; then
+  if [[ "$IS_TEMPLATE" == "false" && "$TOPICS" == *"$TOPIC_LOWER"* ]]; then
     SELECTED_REPOS+=("$REPO_NAME")
   fi
 done
 
 # Check if any repositories matched the criteria
 if [[ ${#SELECTED_REPOS[@]} -eq 0 ]]; then
-  echo "No repositories found with topic '$TOPIC' and is_template=false. Exiting."
+  echo "No repositories found with topic '$TOPIC' (case-insensitive) and is_template=false. Exiting."
   exit 0
 fi
 
