@@ -68,13 +68,14 @@ fi
 echo "Repositories selected for sync: ${#SELECTED_REPOS[@]}"
 echo "${SELECTED_REPOS[@]}"
 
-# ✅ Configure Git authentication for private repositories
+# ✅ Set up GitHub authentication using GIT_ASKPASS
 echo "Configuring Git authentication..."
-git config --global credential.helper store
-echo "https://$GH_TOKEN:x-oauth-basic@github.com" > ~/.git-credentials
-chmod 600 ~/.git-credentials
+export GIT_ASKPASS=$(mktemp)
+chmod +x "$GIT_ASKPASS"
+echo "#!/bin/bash" > "$GIT_ASKPASS"
+echo "echo \"$GH_TOKEN\"" >> "$GIT_ASKPASS"
 
-# Clone the template repository using authentication
+# Clone the template repository
 echo "Cloning template repository '$TEMPLATE_REPO'..."
 git clone https://github.com/$ORG/$TEMPLATE_REPO.git template-repo
 
