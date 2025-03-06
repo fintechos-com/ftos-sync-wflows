@@ -122,6 +122,11 @@ for REPO in "${SELECTED_REPOS[@]}"; do
     cp -f "$FILE" .github/workflows/
   done
 
+
+
+
+
+
   # ✅ Check if there are actual changes before committing
   if [[ -n $(git status --porcelain) ]]; then
     echo "Changes detected, committing update..."
@@ -133,12 +138,26 @@ for REPO in "${SELECTED_REPOS[@]}"; do
     # ✅ Use force push with lease if necessary
     git push --force-with-lease origin "$UNIQUE_BRANCH" || (echo "Push failed, retrying with pull + force push" && git pull --rebase origin main && git push --force origin "$UNIQUE_BRANCH")
 
+    # Label name
+    LABEL="template_sync"
+
+    # Check if the label exists
+    LABEL_EXISTS=$(gh label list --repo "$ORG/$TEMPLATE_REPO" --json name -q ".[] | select(.name == \"$LABEL\")")
+
+    if [ -z "$LABEL_EXISTS" ]; then
+        echo "Label '$LABEL' does not exist. Creating it..."
+        gh label create "$LABEL" --repo "$ORG/$TEMPLATE_REPO" --description "Sync workflows from template" --color "#0366d6"
+        echo "Label '$LABEL' created successfully."
+    else
+        echo "Label '$LABEL' already exists."
+    fi
+
     # Create a pull request with label
     gh pr create --title "Sync workflows from template" \
                  --body "Updating workflows from template repository" \
                  --base main \
                  --head "$UNIQUE_BRANCH" \
-                 --label "template_sync"
+                 --label "$LABEL"
   else
     echo "No changes detected. Skipping PR creation."
   fi
