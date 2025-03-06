@@ -79,6 +79,9 @@ echo "echo \"$GH_TOKEN\"" >> "$GIT_ASKPASS"
 echo "Cloning template repository '$TEMPLATE_REPO'..."
 git clone https://github.com/$ORG/$TEMPLATE_REPO.git template-repo
 
+git config --global user.email "git-bot@fintechos.com"
+git config --global user.name "Ftos Sync WFlows"
+
 # Sync workflows in selected repositories
 for REPO in "${SELECTED_REPOS[@]}"; do
   echo "Processing $REPO..."
