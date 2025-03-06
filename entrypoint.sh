@@ -68,16 +68,22 @@ fi
 echo "Repositories selected for sync: ${#SELECTED_REPOS[@]}"
 echo "${SELECTED_REPOS[@]}"
 
+# ✅ Configure Git authentication for private repositories
+echo "Configuring Git authentication..."
+git config --global credential.helper store
+echo "https://$GH_TOKEN:x-oauth-basic@github.com" > ~/.git-credentials
+chmod 600 ~/.git-credentials
+
 # Clone the template repository using authentication
 echo "Cloning template repository '$TEMPLATE_REPO'..."
-git clone https://$GH_TOKEN@github.com/$ORG/$TEMPLATE_REPO.git template-repo
+git clone https://github.com/$ORG/$TEMPLATE_REPO.git template-repo
 
 # Sync workflows in selected repositories
 for REPO in "${SELECTED_REPOS[@]}"; do
   echo "Processing $REPO..."
 
   # Clone repository using authentication
-  git clone https://$GH_TOKEN@github.com/$ORG/$REPO.git
+  git clone https://github.com/$ORG/$REPO.git
   cd $REPO
 
   # Create a new branch for the update
@@ -86,13 +92,13 @@ for REPO in "${SELECTED_REPOS[@]}"; do
   # Ensure the target workflows directory exists
   mkdir -p .github/workflows/
 
-  # Copy files from template, skipping ignored files
+  # ✅ Copy files from template, skipping ignored files
   echo "Syncing workflows from template while ignoring: ${IGNORED_FILES[*]}"
   for FILE in ../template-repo/.github/workflows/*.yaml; do
     FILE_NAME=$(basename "$FILE")
     
     # Check if the file should be ignored
-    if [[ " ${IGNORED_FILES[*]} " =~ " $FILE_NAME " ]]; then
+    if [[ " ${IGNORED_FILES[@]} " =~ " ${FILE_NAME} " ]]; then
       echo "Skipping $FILE_NAME..."
       continue
     fi
@@ -101,7 +107,7 @@ for REPO in "${SELECTED_REPOS[@]}"; do
     cp -f "$FILE" .github/workflows/
   done
 
-  # Check if there are changes
+  # ✅ Check if there are actual changes before committing
   if [[ -n $(git status --porcelain) ]]; then
     echo "Changes detected, committing update..."
 
@@ -123,3 +129,5 @@ for REPO in "${SELECTED_REPOS[@]}"; do
   cd ..
   rm -rf $REPO
 done
+
+echo "Sync completed!"
