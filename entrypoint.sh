@@ -125,7 +125,7 @@ for REPO in "${SELECTED_REPOS[@]}"; do
                  --body "Updating workflows from template repository" \
                  --base main \
                  --head update-workflows \
-                 --label "sync-workflows-new"
+                 --label "tempalte-sync"
   else
     echo "No changes detected. Skipping PR creation."
   fi
