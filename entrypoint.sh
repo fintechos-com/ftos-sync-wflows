@@ -12,7 +12,7 @@ IFS=',' read -r -a IGNORED_FILES <<< "$IGNORE_YAML_FILES"
 
 echo "Fetching repositories from organization '$ORG'..."
 
-PAGE=9
+PAGE=1
 PER_PAGE=100
 ALL_REPOS=()
 
@@ -75,12 +75,13 @@ chmod +x "$GIT_ASKPASS"
 echo "#!/bin/bash" > "$GIT_ASKPASS"
 echo "echo \"$GH_TOKEN\"" >> "$GIT_ASKPASS"
 
+# ✅ Configure Git user details
+git config --global user.email "github-actions@github.com"
+git config --global user.name "GitHub Actions Bot"
+
 # Clone the template repository
 echo "Cloning template repository '$TEMPLATE_REPO'..."
 git clone https://github.com/$ORG/$TEMPLATE_REPO.git template-repo
-
-git config --global user.email "git-bot@fintechos.com"
-git config --global user.name "Ftos Sync WFlows"
 
 # Sync workflows in selected repositories
 for REPO in "${SELECTED_REPOS[@]}"; do
@@ -90,8 +91,18 @@ for REPO in "${SELECTED_REPOS[@]}"; do
   git clone https://github.com/$ORG/$REPO.git
   cd $REPO
 
-  # Create a new branch for the update
-  git checkout -b update-workflows
+  # Ensure we have the latest updates from remote
+  git fetch origin main
+
+  # ✅ Generate a unique branch name using timestamp + short hash
+  UNIQUE_BRANCH="update-workflows-$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD)"
+  echo "Creating unique branch: $UNIQUE_BRANCH"
+  
+  # Create and switch to the new branch
+  git checkout -b "$UNIQUE_BRANCH"
+
+  # ✅ Rebase to avoid conflicts
+  git rebase origin/main || (echo "Rebase failed, attempting to resolve conflicts..." && git rebase --abort && git reset --hard origin/main)
 
   # Ensure the target workflows directory exists
   mkdir -p .github/workflows/
@@ -118,14 +129,16 @@ for REPO in "${SELECTED_REPOS[@]}"; do
     # Commit and push changes
     git add .github/workflows/
     git commit -m "Sync workflows from template"
-    git push origin update-workflows
+
+    # ✅ Use force push with lease if necessary
+    git push --force-with-lease origin "$UNIQUE_BRANCH" || (echo "Push failed, retrying with pull + force push" && git pull --rebase origin main && git push --force origin "$UNIQUE_BRANCH")
 
     # Create a pull request with label
     gh pr create --title "Sync workflows from template" \
                  --body "Updating workflows from template repository" \
                  --base main \
-                 --head update-workflows \
-                 --label "template-sync"
+                 --head "$UNIQUE_BRANCH" \
+                 --label "sync-workflows"
   else
     echo "No changes detected. Skipping PR creation."
   fi
