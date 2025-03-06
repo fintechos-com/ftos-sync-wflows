@@ -142,11 +142,11 @@ for REPO in "${SELECTED_REPOS[@]}"; do
     LABEL="template_sync"
 
     # Check if the label exists
-    LABEL_EXISTS=$(gh label list --repo "$ORG/$TEMPLATE_REPO" --json name -q ".[] | select(.name == \"$LABEL\")")
+    LABEL_EXISTS=$(gh label list --repo "$ORG/$REPO" --json name -q ".[] | select(.name == \"$LABEL\")")
 
     if [ -z "$LABEL_EXISTS" ]; then
         echo "Label '$LABEL' does not exist. Creating it..."
-        gh label create "$LABEL" --repo "$ORG/$TEMPLATE_REPO" --description "Sync workflows from template" --color "#0366d6"
+        gh label create "$LABEL" --repo "$ORG/$REPO" --description "Sync workflows from template" --color "#0366d6"
         echo "Label '$LABEL' created successfully."
     else
         echo "Label '$LABEL' already exists."
