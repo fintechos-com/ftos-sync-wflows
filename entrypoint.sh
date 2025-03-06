@@ -7,6 +7,9 @@ if [[ -z "$GH_TOKEN" || -z "$ORG" || -z "$TEMPLATE_REPO" ]]; then
   exit 1
 fi
 
+# Convert IGNORE_YAML_FILES to an array (comma-separated values)
+IFS=',' read -r -a IGNORED_FILES <<< "$IGNORE_YAML_FILES"
+
 echo "Fetching repositories from organization '$ORG'..."
 
 PAGE=1
@@ -83,9 +86,20 @@ for REPO in "${SELECTED_REPOS[@]}"; do
   # Ensure the target workflows directory exists
   mkdir -p .github/workflows/
 
-  # Copy files from template without deleting extra YAMLs
-  echo "Syncing workflows from template..."
-  cp -rf ../template-repo/.github/workflows/* .github/workflows/
+  # Copy files from template, skipping ignored files
+  echo "Syncing workflows from template while ignoring: ${IGNORED_FILES[*]}"
+  for FILE in ../template-repo/.github/workflows/*.yaml; do
+    FILE_NAME=$(basename "$FILE")
+    
+    # Check if the file should be ignored
+    if [[ " ${IGNORED_FILES[*]} " =~ " $FILE_NAME " ]]; then
+      echo "Skipping $FILE_NAME..."
+      continue
+    fi
+
+    echo "Copying $FILE_NAME..."
+    cp -f "$FILE" .github/workflows/
+  done
 
   # Check if there are changes
   if [[ -n $(git status --porcelain) ]]; then
@@ -93,21 +107,4 @@ for REPO in "${SELECTED_REPOS[@]}"; do
 
     # Commit and push changes
     git add .github/workflows/
-    git commit -m "Sync workflows from template"
-    git push origin update-workflows
-
-    # Create a pull request with label
-    gh pr create --title "Sync workflows from template" \
-                 --body "Updating workflows from template repository" \
-                 --base main \
-                 --head update-workflows \
-                 --label "sync-workflows"
-  else
-    echo "No changes detected. Skipping PR creation."
-  fi
-
-  cd ..
-  rm -rf $REPO
-done
-
-echo "Sync completed!"
+    git commit -
