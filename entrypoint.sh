@@ -12,11 +12,11 @@ IFS=',' read -r -a IGNORED_FILES <<< "$IGNORE_YAML_FILES"
 
 echo "Fetching repositories from organization '$ORG'..."
 
-PAGE=1
+PAGE=9
 PER_PAGE=100
 ALL_REPOS=()
 
-# Step 1: Retrieve all repositories in the organization (pagination)
+# Retrieve all repositories in the organization (pagination)
 while :; do
   echo "Fetching page $PAGE..."
   
@@ -38,7 +38,7 @@ while :; do
   ((PAGE++))
 done
 
-# Step 2: Check which repositories were created from the correct template
+# Check which repositories were created from the correct template
 echo "Total repositories fetched: ${#ALL_REPOS[@]}"
 SELECTED_REPOS=()
 
@@ -59,7 +59,7 @@ for REPO_JSON in "${ALL_REPOS[@]}"; do
   fi
 done
 
-# Step 3: Ensure at least one repository matched
+# Ensure at least one repository matched
 if [[ ${#SELECTED_REPOS[@]} -eq 0 ]]; then
   echo "No repositories found matching template '$TEMPLATE_REPO'. Exiting."
   exit 0
@@ -68,16 +68,16 @@ fi
 echo "Repositories selected for sync: ${#SELECTED_REPOS[@]}"
 echo "${SELECTED_REPOS[@]}"
 
-# Step 4: Clone the template repository
+# Clone the template repository using authentication
 echo "Cloning template repository '$TEMPLATE_REPO'..."
-git clone https://github.com/$ORG/$TEMPLATE_REPO.git template-repo
+git clone https://$GH_TOKEN@github.com/$ORG/$TEMPLATE_REPO.git template-repo
 
-# Step 5: Sync only `.github/workflows/` in selected repositories
+# Sync workflows in selected repositories
 for REPO in "${SELECTED_REPOS[@]}"; do
   echo "Processing $REPO..."
 
-  # Clone repository
-  git clone https://github.com/$ORG/$REPO.git
+  # Clone repository using authentication
+  git clone https://$GH_TOKEN@github.com/$ORG/$REPO.git
   cd $REPO
 
   # Create a new branch for the update
@@ -107,4 +107,19 @@ for REPO in "${SELECTED_REPOS[@]}"; do
 
     # Commit and push changes
     git add .github/workflows/
-    git commit -
+    git commit -m "Sync workflows from template"
+    git push origin update-workflows
+
+    # Create a pull request with label
+    gh pr create --title "Sync workflows from template" \
+                 --body "Updating workflows from template repository" \
+                 --base main \
+                 --head update-workflows \
+                 --label "sync-workflows"
+  else
+    echo "No changes detected. Skipping PR creation."
+  fi
+
+  cd ..
+  rm -rf $REPO
+done
