@@ -12,7 +12,7 @@ IFS=',' read -r -a IGNORED_FILES <<< "$IGNORE_YAML_FILES"
 
 echo "Fetching repositories from organization '$ORG'..."
 
-PAGE=1
+PAGE=9
 PER_PAGE=100
 ALL_REPOS=()
 
