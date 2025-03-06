@@ -20,3 +20,4 @@ runs:
     GH_TOKEN: ${{ inputs.github_token }}
     ORG: ${{ inputs.org }}
     TEMPLATE_REPO: ${{ inputs.template_repo }}
+    TOPIC: ${{ inputs.template_repo }}
