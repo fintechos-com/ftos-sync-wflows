@@ -2,8 +2,8 @@
 set -e
 
 # Ensure required environment variables are set
-if [[ -z "$GH_TOKEN" || -z "$ORG" || -z "$TOPIC" ]]; then
-  echo "Error: Required environment variables (GH_TOKEN, ORG, TOPIC) are not set. Exiting."
+if [[ -z "$GH_TOKEN" || -z "$ORG" || -z "$TEMPLATE_REPO" ]]; then
+  echo "Error: Required environment variables (GH_TOKEN, ORG, TEMPLATE_REPO) are not set. Exiting."
   exit 1
 fi
 
@@ -13,11 +13,12 @@ PAGE=1
 PER_PAGE=100
 ALL_REPOS=()
 
+# Step 1: Retrieve all repositories in the organization (pagination)
 while :; do
   echo "Fetching page $PAGE..."
   
-  # Fetch repositories for the page
-  REPO_PAGE=$(gh api "orgs/$ORG/repos?per_page=$PER_PAGE&page=$PAGE" | jq -c '.[]')
+  # Fetch repositories for the page (basic details)
+  REPO_PAGE=$(gh api "orgs/$ORG/repos?per_page=$PER_PAGE&page=$PAGE" --jq '.[] | {name: .name, owner: .owner.login}')
 
   # Stop if no repositories are returned
   if [[ -z "$REPO_PAGE" ]]; then
@@ -34,42 +35,41 @@ while :; do
   ((PAGE++))
 done
 
-# Check the total number of repositories fetched
+# Step 2: Check which repositories were created from the correct template
 echo "Total repositories fetched: ${#ALL_REPOS[@]}"
-
-# Debug the first few repositories to ensure they contain topics
-echo "First 5 fetched repositories:"
-for i in "${!ALL_REPOS[@]}"; do
-  if [[ $i -lt 5 ]]; then
-    echo "${ALL_REPOS[$i]}" | jq '.name, .topics, .is_template'
-  fi
-done
-
-# Normalize the topic to lowercase (GitHub API topics are always lowercase)
-TOPIC_LOWER=$(echo "$TOPIC" | tr '[:upper:]' '[:lower:]')
-
-# Filter repositories based on topic and is_template=false
 SELECTED_REPOS=()
+
 for REPO_JSON in "${ALL_REPOS[@]}"; do
   REPO_NAME=$(echo "$REPO_JSON" | jq -r '.name')
-  TOPICS=$(echo "$REPO_JSON" | jq -r '[.topics[]?] | map(ascii_downcase) | join(",")')
-  IS_TEMPLATE=$(echo "$REPO_JSON" | jq -r '.is_template')
+  OWNER_NAME=$(echo "$REPO_JSON" | jq -r '.owner')
 
-  if [[ "$IS_TEMPLATE" == "false" && "$TOPICS" == *"$TOPIC_LOWER"* ]]; then
+  echo "Checking repository '$OWNER_NAME/$REPO_NAME'..."
+
+  # Fetch full repository details
+  TEMPLATE_NAME=$(gh api "repos/$OWNER_NAME/$REPO_NAME" --jq '.template_repository.name // empty')
+
+  if [[ "$TEMPLATE_NAME" == "$TEMPLATE_REPO" ]]; then
+    echo "✅ Matched template: $REPO_NAME (Template: $TEMPLATE_NAME)"
     SELECTED_REPOS+=("$REPO_NAME")
+  else
+    echo "❌ Skipping: $REPO_NAME (Template: $TEMPLATE_NAME)"
   fi
 done
 
-# Check if any repositories matched the criteria
+# Step 3: Ensure at least one repository matched
 if [[ ${#SELECTED_REPOS[@]} -eq 0 ]]; then
-  echo "No repositories found with topic '$TOPIC' (case-insensitive) and is_template=false. Exiting."
+  echo "No repositories found matching template '$TEMPLATE_REPO'. Exiting."
   exit 0
 fi
 
 echo "Repositories selected for sync: ${#SELECTED_REPOS[@]}"
 echo "${SELECTED_REPOS[@]}"
 
-# Loop through filtered repositories and sync .github/workflows/
+# Step 4: Clone the template repository
+echo "Cloning template repository '$TEMPLATE_REPO'..."
+git clone https://github.com/$ORG/$TEMPLATE_REPO.git template-repo
+
+# Step 5: Sync only `.github/workflows/` in selected repositories
 for REPO in "${SELECTED_REPOS[@]}"; do
   echo "Processing $REPO..."
 
@@ -77,24 +77,34 @@ for REPO in "${SELECTED_REPOS[@]}"; do
   git clone https://github.com/$ORG/$REPO.git
   cd $REPO
 
-  # Create a new branch
+  # Create a new branch for the update
   git checkout -b update-workflows
 
-  # Copy only the .github/workflows/ directory
-  rm -rf .github/workflows/
-  cp -r ../template-repo/.github/workflows/ .github/workflows/
+  # Ensure the target workflows directory exists
+  mkdir -p .github/workflows/
 
-  # Commit changes
-  git add .github/workflows/
-  git commit -m "Sync workflows from template"
-  git push origin update-workflows
+  # Copy files from template without deleting extra YAMLs
+  echo "Syncing workflows from template..."
+  cp -rf ../template-repo/.github/workflows/* .github/workflows/
 
-  # Create a pull request with label
-  gh pr create --title "Sync workflows from template" \
-               --body "Updating workflows from template repository" \
-               --base main \
-               --head update-workflows \
-               --label "sync-workflows"
+  # Check if there are changes
+  if [[ -n $(git status --porcelain) ]]; then
+    echo "Changes detected, committing update..."
+
+    # Commit and push changes
+    git add .github/workflows/
+    git commit -m "Sync workflows from template"
+    git push origin update-workflows
+
+    # Create a pull request with label
+    gh pr create --title "Sync workflows from template" \
+                 --body "Updating workflows from template repository" \
+                 --base main \
+                 --head update-workflows \
+                 --label "sync-workflows"
+  else
+    echo "No changes detected. Skipping PR creation."
+  fi
 
   cd ..
   rm -rf $REPO
