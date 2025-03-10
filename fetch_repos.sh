@@ -38,7 +38,10 @@ for REPO_JSON in "${ALL_REPOS[@]}"; do
   TEMPLATE_NAME=$(GH_TOKEN=$GH_TOKEN_SLAVES gh api "repos/$ORG_SLAVES/$REPO_NAME" --jq '.template_repository.name // empty')
 
   if [[ "$TEMPLATE_NAME" == "$TEMPLATE_REPO" ]]; then
+    echo "✅ Matched template: $REPO_NAME (Template: $TEMPLATE_NAME)"
     SELECTED_REPOS+=("$REPO_NAME")
+  else
+    echo "❌ Skipping: $REPO_NAME (Template: $TEMPLATE_NAME)"
   fi
 done
 
