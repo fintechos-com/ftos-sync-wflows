@@ -10,8 +10,8 @@ fi
 # If GH_TOKEN_SLAVES is not set or empty, use GH_TOKEN_MASTER
 if [[ -z "$GH_TOKEN_SLAVES" ]]; then
   echo "GH_TOKEN_SLAVES not provided, using GH_TOKEN_MASTER."
-  GH_TOKEN_SLAVES="$GH_TOKEN_MASTER"
-  ORG_SLAVES="$ORG_MASTER"
+  export GH_TOKEN_SLAVES="$GH_TOKEN_MASTER"
+  export ORG_SLAVES="$ORG_MASTER"
 fi
 
 # Convert EXCLUDED_REPOS to an array (comma-separated values)
@@ -24,3 +24,5 @@ export ORG_SLAVES
 export TEMPLATE_REPO
 export PAGE=${PAGE:-1}  # Default to 1 if PAGE is not provided
 export EXCLUDED_REPO_ARRAY
+
+

@@ -1,8 +1,10 @@
 #!/bin/bash
 set -e
 
-# Run modular scripts
-/app/setup_env.sh
+# Load environment variables
+source /app/setup_env.sh
+
+# Run the modular scripts
 /app/setup_git.sh
 /app/fetch_repos.sh
 /app/sync_workflows.sh
