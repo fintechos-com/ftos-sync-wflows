@@ -11,13 +11,20 @@ fi
 echo "Cloning template repository '$TEMPLATE_REPO' from '$ORG_MASTER'..."
 
 # ✅ Use `GIT_ASKPASS_MASTER` for cloning from ORG_MASTER
-GIT_ASKPASS="$GIT_ASKPASS_MASTER" git clone https://github.com/$ORG_MASTER/$TEMPLATE_REPO.git template-repo
+GIT_ASKPASS="$GIT_ASKPASS_MASTER" git clone https://github.com/$ORG_MASTER/$TEMPLATE_REPO.git template-repo || {
+  echo "❌ Failed to clone template repository! Exiting."
+  exit 1
+}
 
 for REPO in "${SELECTED_REPOS[@]}"; do
   echo "Processing $REPO..."
 
   # ✅ Use `GIT_ASKPASS_SLAVES` for cloning and pushing to ORG_SLAVES
-  GIT_ASKPASS="$GIT_ASKPASS_SLAVES" git clone https://github.com/$ORG_SLAVES/$REPO.git
+  GIT_ASKPASS="$GIT_ASKPASS_SLAVES" git clone https://github.com/$ORG_SLAVES/$REPO.git || {
+    echo "❌ Failed to clone repository $REPO! Skipping..."
+    continue
+  }
+  
   cd $REPO
 
   GIT_ASKPASS="$GIT_ASKPASS_SLAVES" git fetch origin main
