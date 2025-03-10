@@ -1,23 +1,41 @@
 name: "Sync Workflows from Template"
-description: "Syncs only .github/workflows/ from a template repository to all derived repositories"
-
-
+description: "Syncs workflows from a template repository to multiple repositories in different organizations. It support only a secondary Organization, if slave repos are spread arrount multiple orgs, a yaml file for each org should be created"
 inputs:
-  github_token:
-    description: "GitHub App Token"
+  GH_TOKEN_MASTER:
+    description: "GitHub token for the master org (ORG_MASTER)."
     required: true
-  org:
-    description: "GitHub Organization"
+  GH_TOKEN_SLAVES:
+    description: "GitHub token for the slave org (ORG_SLAVES). If empty, it defaults to GH_TOKEN_MASTER."
+    required: false
+  ORG_MASTER:
+    description: "The organization where the template repo is located."
     required: true
-  template_repo:
-    description: "Template Repository Name"
+  ORG_SLAVES:
+    description: "The organization where the child repositories are located."
     required: true
+  TEMPLATE_REPO:
+    description: "The template repository name in ORG_MASTER."
+    required: true
+  IGNORE_YAML_FILES:
+    description: "Comma-separated list of YAML files to ignore."
+    required: false
+  EXCLUDED_REPOS:
+    description: "Comma-separated list of slave repositories that should not be updated."
+    required: false
+  PAGE:
+    description: "Starting page number for pagination (default: 1)."
+    required: false
+    default: "1"
 
 runs:
   using: "docker"
   image: "Dockerfile"
   env:
-    GH_TOKEN: ${{ inputs.github_token }}
-    ORG: ${{ inputs.org }}
-    TEMPLATE_REPO: ${{ inputs.template_repo }}
-    TOPIC: ${{ inputs.template_repo }}
+    GH_TOKEN_MASTER: ${{ inputs.GH_TOKEN_MASTER }}
+    GH_TOKEN_SLAVES: ${{ inputs.GH_TOKEN_SLAVES }}
+    ORG_MASTER: ${{ inputs.ORG_MASTER }}
+    ORG_SLAVES: ${{ inputs.ORG_SLAVES }}
+    TEMPLATE_REPO: ${{ inputs.TEMPLATE_REPO }}
+    IGNORE_YAML_FILES: ${{ inputs.IGNORE_YAML_FILES }}
+    EXCLUDED_REPOS: ${{ inputs.EXCLUDED_REPOS }}
+    PAGE: ${{ inputs.PAGE }}

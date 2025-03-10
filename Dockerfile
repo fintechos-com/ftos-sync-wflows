@@ -1,20 +1,16 @@
-FROM ubuntu:latest
+FROM debian:latest
 
-# Install dependencies
 RUN apt-get update && apt-get install -y \
     git \
-    curl \
     jq \
-    gh
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null && \
+    apt-get update && apt-get install -y gh
+
 WORKDIR /app
+COPY . /app
 
-# Copy the entrypoint script
-COPY entrypoint.sh /entrypoint.sh
-
-# Give execution permissions
-RUN chmod +x /entrypoint.sh
-
-# Run the script
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/app/entrypoint.sh"]
