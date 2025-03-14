@@ -32,11 +32,12 @@ for REPO in "${SELECTED_REPOS[@]}"; do
   git checkout -b "$UNIQUE_BRANCH"
   mkdir -p .github/workflows/
 
+  echo "Checking ingore yaml files"
   for FILE in ../template-repo/.github/workflows/*.yaml; do
     FILE_NAME=$(basename "$FILE")
-    
+    echo "Comparing $FILE with  ${IGNORED_FILES[@]}"
     if [[ " ${IGNORED_FILES[@]} " =~ " ${FILE_NAME} " ]]; then
-      continue
+      continue 
     fi
 
     cp -f "$FILE" .github/workflows/
