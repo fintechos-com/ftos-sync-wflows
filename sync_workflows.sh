@@ -22,7 +22,8 @@ if [[ ${#SELECTED_REPOS[@]} -eq 0 ]]; then
 fi
 
 echo "Cloning template repository '$TEMPLATE_REPO' from '$ORG_MASTER'..."
-
+# ✅ Trust the GitHub Actions workspace directory
+git config --global --add safe.directory /github/workspace
 if [[ "$DRY_RUN" == "true" ]]; then
   echo "🟡 [DRY_RUN] Would have cloned template repository: $TEMPLATE_REPO"
 else
@@ -39,7 +40,7 @@ for REPO in "${SELECTED_REPOS[@]}"; do
   fi
   echo "Processing $REPO..."
   export GH_TOKEN="$GH_TOKEN_SLAVES"
-  
+
   if [[ "$DRY_RUN" == "true" ]]; then
     echo "🟡 [DRY_RUN] Would have cloned repository: $REPO"
   else
@@ -50,16 +51,27 @@ for REPO in "${SELECTED_REPOS[@]}"; do
     cd "$REPO"
   fi
 
-  # ✅ Check if an open PR exists for this repository
-  EXISTING_PR_BRANCH=$(gh pr list --repo "$ORG_SLAVES/$REPO" --state open --json headRefName --jq ".[] | select(.headRefName | startswith(\"update-workflows-\")) | .headRefName")
+  # ✅ Get the latest open PR branch (sorting by newest)
+  EXISTING_PR_BRANCH=$(gh pr list --repo "$ORG_SLAVES/$REPO" --state open --json headRefName,createdAt \
+    --jq "sort_by(.createdAt) | reverse | .[0].headRefName")
 
   if [[ -n "$EXISTING_PR_BRANCH" ]]; then
     echo "⚠️ Found an existing open PR with branch '$EXISTING_PR_BRANCH' in $REPO."
     UNIQUE_BRANCH="$EXISTING_PR_BRANCH"
-    git checkout "$EXISTING_PR_BRANCH"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+      echo "🟡 [DRY_RUN] Would have switched to existing PR branch '$EXISTING_PR_BRANCH'."
+    else
+      git checkout "$EXISTING_PR_BRANCH"
+    fi
   else
     UNIQUE_BRANCH="update-workflows-$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD)"
-    git checkout -b "$UNIQUE_BRANCH"
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+      echo "🟡 [DRY_RUN] Would have created and switched to new branch: $UNIQUE_BRANCH."
+    else
+      git checkout -b "$UNIQUE_BRANCH"
+    fi
   fi
 
   mkdir -p .github/workflows/
