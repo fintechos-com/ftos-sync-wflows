@@ -17,6 +17,8 @@ fi
 # Convert EXCLUDED_REPOS to an array (comma-separated values)
 IFS=',' read -r -a EXCLUDED_REPO_ARRAY <<< "$EXCLUDED_REPOS"
 
+IFS=',' read -r -a IGNORED_FILES <<< "$IGNORE_YAML_FILES"
+
 export GH_TOKEN_MASTER
 export GH_TOKEN_SLAVES
 export ORG_MASTER
@@ -24,5 +26,5 @@ export ORG_SLAVES
 export TEMPLATE_REPO
 export PAGE=${PAGE:-1}  # Default to 1 if PAGE is not provided
 export EXCLUDED_REPO_ARRAY
-export IGNORE_YAML_FILES
+export IGNORED_FILES
 
