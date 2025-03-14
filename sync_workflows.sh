@@ -14,6 +14,9 @@ echo "🔹 Excluded Repositories: ${EXCLUDED_REPO_ARRAY[*]}"
 echo "🔹 Ignored Files: ${IGNORED_FILES_ARRAY[*]}"
 echo "🟡 DRY_RUN mode: $DRY_RUN (No changes will be made if true)"
 
+# ✅ Trust the GitHub Actions workspace directory
+git config --global --add safe.directory /github/workspace
+
 read -r -a SELECTED_REPOS < selected_repos.txt
 
 if [[ ${#SELECTED_REPOS[@]} -eq 0 ]]; then
