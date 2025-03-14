@@ -4,22 +4,29 @@ set -e
 # ✅ Convert CLOSE_PR_DAYS to an integer (default 30, 0 means close all immediately)
 CLOSE_PR_DAYS=${CLOSE_PR_DAYS:-30}
 
-echo "🔍 Searching for PRs with label 'sync-workflows' older than $CLOSE_PR_DAYS days in organization '$ORG_SLAVES'..."
+echo "🔍 Searching for PRs with label 'sync-workflows' older than $CLOSE_PR_DAYS days in selected repositories of '$ORG_SLAVES'..."
 echo "🟡 DRY_RUN mode: $DRY_RUN (No changes will be made if true)"
 
 export GH_TOKEN="$GH_TOKEN_SLAVES"
 
-# ✅ Fetch all repositories in ORG_SLAVES
-REPO_LIST=$(gh repo list "$ORG_SLAVES" --json name --jq '.[].name')
+# ✅ Read the correct repositories from `selected_repos.txt`
+if [[ ! -f selected_repos.txt ]]; then
+  echo "❌ Error: selected_repos.txt not found! Exiting."
+  exit 1
+fi
 
-for REPO in $REPO_LIST; do
+read -r -a SELECTED_REPOS < selected_repos.txt
+
+for REPO in "${SELECTED_REPOS[@]}"; do
   echo "🔎 Checking repository: $REPO..."
 
   # ✅ Find PRs with label "sync-workflows"
   if [[ "$CLOSE_PR_DAYS" -eq 0 ]]; then
+    # ✅ Close all PRs with label "sync-workflows" immediately
     PR_DATA=$(gh pr list --repo "$ORG_SLAVES/$REPO" --state open --json number,headRefName,labels --jq \
       '.[] | select(.labels[].name == "sync-workflows") | {number: .number, branch: .headRefName}')
   else
+    # ✅ Close PRs older than CLOSE_PR_DAYS with label "sync-workflows"
     PR_DATA=$(gh pr list --repo "$ORG_SLAVES/$REPO" --state open --json number,headRefName,labels,createdAt --jq \
       ".[] | select(.labels[].name == \"sync-workflows\" and (now - (.createdAt | fromdate)) > ($CLOSE_PR_DAYS * 86400)) | {number: .number, branch: .headRefName}")
   fi
