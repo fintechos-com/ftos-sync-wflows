@@ -8,4 +8,4 @@ source /app/setup_git.sh
 # Run the modular scripts
 /app/fetch_repos.sh
 /app/sync_workflows.sh
-/app/create_pr.sh
+#/app/create_pr.sh

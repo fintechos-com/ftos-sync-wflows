@@ -47,6 +47,42 @@ for REPO in "${SELECTED_REPOS[@]}"; do
     git commit -m "Sync workflows from template"
     GIT_ASKPASS="$GIT_ASKPASS_SLAVES" git push --force-with-lease origin "$UNIQUE_BRANCH"
     echo "$REPO,$UNIQUE_BRANCH" >> updated_repos.txt
+    
+
+      LABEL_EXISTS=$(gh api "repos/$ORG_SLAVES/$REPO/labels" --jq '.[] | select(.name == "sync-workflows") | .name')
+
+      # ✅ If the label does not exist, create it
+      if [[ -z "$LABEL_EXISTS" ]]; then
+        echo "⚠️ Label 'sync-workflows' not found in $REPO. Creating it..."
+        gh api "repos/$ORG_SLAVES/$REPO/labels" \
+          --method POST \
+          --field name="sync-workflows" \
+          --field color="0075ca" \
+          --field description="Automatically synced workflow updates"
+        echo "✅ Label 'sync-workflows' created in $REPO."
+      else
+        echo "✅ Label 'sync-workflows' already exists in $REPO."
+      fi
+
+      
+      # ✅ Use `GIT_ASKPASS_SLAVES` to authenticate GitHub CLI
+      GH_TOKEN=$GH_TOKEN_SLAVES gh pr create \
+        --repo "$ORG_SLAVES/$REPO" \
+        --title "Sync workflows from template" \
+        --body "Updating workflows from template repository.\n\nThis PR was automatically created by GitHub Actions." \
+        --base main \
+        --head "$UNIQUE_BRANCH" \
+        --label "sync-workflows" || {
+          echo "❌ Failed to create PR for $REPO. Check if the branch exists."
+          continue
+        }
+
+      echo "✅ PR successfully created for $REPO!"
+
+      # ✅ Remove repo only after PR creation is confirmed
+      rm -rf $REPO
+  else
+    echo "✔️ No changes detected. Skipping PR creation."    
   fi
 
   cd ..
