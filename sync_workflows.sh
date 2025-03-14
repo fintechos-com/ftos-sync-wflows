@@ -1,6 +1,16 @@
 #!/bin/bash
 set -e
 
+# ✅ Log Environment Variables for Debugging
+echo "🔹 GH_TOKEN_SLAVES: [SET]"
+echo "🔹 ORG_SLAVES: $ORG_SLAVES"
+echo "🔹 TEMPLATE_REPO: $TEMPLATE_REPO"
+echo "🔹 PAGE: $PAGE"
+echo "🔹 Excluded Repositories: ${EXCLUDED_REPO_ARRAY[*]}"
+echo "🔹 Ignored Files: ${IGNORED_FILES_ARRAY[*]}"
+
+
+
 read -r -a SELECTED_REPOS < selected_repos.txt
 
 if [[ ${#SELECTED_REPOS[@]} -eq 0 ]]; then
@@ -17,6 +27,11 @@ GIT_ASKPASS="$GIT_ASKPASS_MASTER" git clone https://github.com/$ORG_MASTER/$TEMP
 }
 
 for REPO in "${SELECTED_REPOS[@]}"; do
+  # ✅ Skip excluded repositories
+  if [[ " ${EXCLUDED_REPO_ARRAY[@]} " =~ " ${REPO} " ]]; then
+    echo "🚫 Skipping excluded repository: $REPO"
+    continue
+  fi
   echo "Processing $REPO..."
 
   # ✅ Use `GIT_ASKPASS_SLAVES` for cloning and pushing to ORG_SLAVES
