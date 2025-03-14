@@ -56,6 +56,11 @@ for REPO in "${SELECTED_REPOS[@]}"; do
     rm -rf $REPO
     continue
   fi  
+
+  # ✅ Ensure GH_TOKEN is set before calling `gh`
+  export GH_TOKEN="$GH_TOKEN_SLAVES"
+
+
   # ✅ Ensure label exists before creating PR
   LABEL_EXISTS=$(gh api "repos/$ORG_SLAVES/$REPO/labels" --jq '.[] | select(.name == "sync-workflows") | .name')
 
