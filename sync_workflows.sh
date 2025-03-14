@@ -50,5 +50,5 @@ for REPO in "${SELECTED_REPOS[@]}"; do
   fi
 
   cd ..
-  rm -rf $REPO
+
 done

@@ -36,11 +36,10 @@ while IFS=',' read -r REPO UNIQUE_BRANCH; do
     }
 
   echo "✅ PR successfully created for $REPO!"
-  GH_TOKEN=$GH_TOKEN_SLAVES gh pr create --title "Sync workflows from template" \
-                 --body "Updating workflows from template repository" \
-                 --base main \
-                 --head "$UNIQUE_BRANCH" \
-                 --label "sync-workflows"
+
+  # ✅ Remove repo only after PR creation is confirmed
+  rm -rf $REPO
+
 done < updated_repos.txt
 
 rm updated_repos.txt
