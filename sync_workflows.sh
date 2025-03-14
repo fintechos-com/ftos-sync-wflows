@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# ✅ Convert space-separated strings back to arrays
+read -r -a EXCLUDED_REPO_ARRAY <<< "$EXCLUDED_REPO_STRING"
+read -r -a IGNORED_FILES_ARRAY <<< "$IGNORED_FILES_STRING"
+
 # ✅ Log Environment Variables for Debugging
 echo "🔹 GH_TOKEN_SLAVES: [SET]"
 echo "🔹 ORG_SLAVES: $ORG_SLAVES"
@@ -50,17 +54,29 @@ for REPO in "${SELECTED_REPOS[@]}"; do
   echo "Checking ingore yaml files"
   for FILE in ../template-repo/.github/workflows/*.yaml; do
     FILE_NAME=$(basename "$FILE")
-    echo "Comparing $FILE_NAME with  ${IGNORED_FILES[@]}"
-    if [[ " ${IGNORED_FILES[@]} " =~ " ${FILE_NAME} " ]]; then
-      continue 
+    echo "Comparing $FILE_NAME with  ${IGNORED_FILES_ARRAY[@]}"
+    # Check if the file is in the ignored list
+    if [[ " ${IGNORED_FILES_ARRAY[@]} " =~ " ${FILE_NAME} " ]]; then
+      echo "🚫 Skipping ignored file: $FILE_NAME"
+      continue  # Skip this iteration
     fi
-
+    echo "✅ Copying $FILE_NAME..."
     cp -f "$FILE" .github/workflows/
   done
 
 
   if [[ -n $(git status --porcelain) ]]; then
     echo "🔄 Changes detected. Committing and pushing..."
+
+    # ✅ Ensure ignored files are not staged in commit
+    for IGNORE_FILE in "${IGNORED_FILES_ARRAY[@]}"; do
+      if [[ -f ".github/workflows/$IGNORE_FILE" ]]; then
+        echo "🚫 Removing ignored file before committing: $IGNORE_FILE"
+        git rm --cached ".github/workflows/$IGNORE_FILE"
+      fi
+    done
+
+
     git add .github/workflows/
     git commit -m "Sync workflows from template"
     GIT_ASKPASS="$GIT_ASKPASS_SLAVES" git push --force-with-lease origin "$UNIQUE_BRANCH"

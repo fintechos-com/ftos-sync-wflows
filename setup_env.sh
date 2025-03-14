@@ -14,10 +14,9 @@ if [[ -z "$GH_TOKEN_SLAVES" ]]; then
   export ORG_SLAVES="$ORG_MASTER"
 fi
 
-# Convert EXCLUDED_REPOS to an array (comma-separated values)
-IFS=',' read -r -a EXCLUDED_REPO_ARRAY <<< "$EXCLUDED_REPOS"
-
-IFS=',' read -r -a IGNORED_FILES_ARRAY <<< "$IGNORE_YAML_FILES"
+# ✅ Convert EXCLUDED_REPOS & IGNORE_YAML_FILES to space-separated strings
+export EXCLUDED_REPO_STRING=$(echo "$EXCLUDED_REPOS" | tr ',' ' ')
+export IGNORED_FILES_STRING=$(echo "$IGNORE_YAML_FILES" | tr ',' ' ')
 
 export GH_TOKEN_MASTER
 export GH_TOKEN_SLAVES
@@ -25,8 +24,8 @@ export ORG_MASTER
 export ORG_SLAVES
 export TEMPLATE_REPO
 export PAGE=${PAGE:-1}  # Default to 1 if PAGE is not provided
-export EXCLUDED_REPO_ARRAY
-export IGNORED_FILES_ARRAY
+export EXCLUDED_REPO_STRING
+export IGNORED_FILES_STRING
 
 # ✅ Log Environment Variables (Debugging)
 echo "🔹 GH_TOKEN_MASTER: [SET]"
@@ -35,5 +34,5 @@ echo "🔹 ORG_MASTER: $ORG_MASTER"
 echo "🔹 ORG_SLAVES: $ORG_SLAVES"
 echo "🔹 TEMPLATE_REPO: $TEMPLATE_REPO"
 echo "🔹 PAGE: $PAGE"
-echo "🔹 EXCLUDED_REPOS: ${EXCLUDED_REPO_ARRAY[*]}"
-echo "🔹 IGNORED_FILES: ${IGNORED_FILES_ARRAY[*]}"
+echo "🔹 Excluded Repositories: $EXCLUDED_REPO_STRING"
+echo "🔹 Ignored Files: $IGNORED_FILES_STRING"
