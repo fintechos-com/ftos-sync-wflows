@@ -52,8 +52,8 @@ for REPO in "${SELECTED_REPOS[@]}"; do
   fi
 
   # ✅ Get the latest open PR branch (sorting by newest)
-  EXISTING_PR_BRANCH=$(gh pr list --repo "$ORG_SLAVES/$REPO" --state open --json headRefName,createdAt \
-    --jq "sort_by(.createdAt) | reverse | .[0].headRefName")
+  EXISTING_PR_BRANCH=$(gh pr list --repo "$ORG_SLAVES/$REPO" --state open --json headRefName,createdAt,labels \
+    --jq "[.[] | select(.labels[].name == \"sync-workflows\")] | sort_by(.createdAt) | reverse | .[0].headRefName")
 
   if [[ -n "$EXISTING_PR_BRANCH" ]]; then
     echo "⚠️ Found an existing open PR with branch '$EXISTING_PR_BRANCH' in $REPO."
