@@ -35,7 +35,7 @@ for REPO in "${SELECTED_REPOS[@]}"; do
   echo "Checking ingore yaml files"
   for FILE in ../template-repo/.github/workflows/*.yaml; do
     FILE_NAME=$(basename "$FILE")
-    echo "Comparing $FILE with  ${IGNORED_FILES[@]}"
+    echo "Comparing $FILE_NAME with  ${IGNORED_FILES[@]}"
     if [[ " ${IGNORED_FILES[@]} " =~ " ${FILE_NAME} " ]]; then
       continue 
     fi
