@@ -24,5 +24,5 @@ export ORG_SLAVES
 export TEMPLATE_REPO
 export PAGE=${PAGE:-1}  # Default to 1 if PAGE is not provided
 export EXCLUDED_REPO_ARRAY
-
+export IGNORE_YAML_FILES
 
