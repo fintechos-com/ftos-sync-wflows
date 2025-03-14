@@ -38,7 +38,8 @@ for REPO in "${SELECTED_REPOS[@]}"; do
     continue
   fi
   echo "Processing $REPO..."
-
+  export GH_TOKEN="$GH_TOKEN_SLAVES"
+  
   if [[ "$DRY_RUN" == "true" ]]; then
     echo "🟡 [DRY_RUN] Would have cloned repository: $REPO"
   else
@@ -117,8 +118,6 @@ for REPO in "${SELECTED_REPOS[@]}"; do
     fi
     continue
   fi
-
-  export GH_TOKEN="$GH_TOKEN_SLAVES"
 
   # ✅ If a PR already exists, skip PR creation
   if [[ -n "$EXISTING_PR_BRANCH" ]]; then
