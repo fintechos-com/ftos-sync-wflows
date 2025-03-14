@@ -73,7 +73,7 @@ for REPO in "${SELECTED_REPOS[@]}"; do
 
   # ✅ Create Pull Request
   echo "🔄 Creating Pull Request for $REPO..."
-  GIT_ASKPASS="$GIT_ASKPASS_SLAVES" gh pr create \
+  GH_TOKEN="$GIT_ASKPASS_SLAVES" gh pr create \
     --repo "$ORG_SLAVES/$REPO" \
     --title "Sync workflows from template" \
     --body "Updating workflows from template repository.\n\nThis PR was automatically created by GitHub Actions." \
