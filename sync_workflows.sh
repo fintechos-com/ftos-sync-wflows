@@ -14,9 +14,6 @@ echo "🔹 Excluded Repositories: ${EXCLUDED_REPO_ARRAY[*]}"
 echo "🔹 Ignored Files: ${IGNORED_FILES_ARRAY[*]}"
 echo "🟡 DRY_RUN mode: $DRY_RUN (No changes will be made if true)"
 
-# ✅ Trust the GitHub Actions workspace directory
-git config --global --add safe.directory /github/workspace
-
 read -r -a SELECTED_REPOS < selected_repos.txt
 
 if [[ ${#SELECTED_REPOS[@]} -eq 0 ]]; then
@@ -52,12 +49,15 @@ for REPO in "${SELECTED_REPOS[@]}"; do
     cd "$REPO"
   fi
 
-  UNIQUE_BRANCH="update-workflows-$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD)"
+  # ✅ Check if an open PR exists for this repository
+  EXISTING_PR_BRANCH=$(gh pr list --repo "$ORG_SLAVES/$REPO" --state open --json headRefName --jq ".[] | select(.headRefName | startswith(\"update-workflows-\")) | .headRefName")
 
-  if [[ "$DRY_RUN" == "true" ]]; then
-    echo "🟡 [DRY_RUN] Would have created and switched to branch: $UNIQUE_BRANCH"
+  if [[ -n "$EXISTING_PR_BRANCH" ]]; then
+    echo "⚠️ Found an existing open PR with branch '$EXISTING_PR_BRANCH' in $REPO."
+    UNIQUE_BRANCH="$EXISTING_PR_BRANCH"
+    git checkout "$EXISTING_PR_BRANCH"
   else
-    GIT_ASKPASS="$GIT_ASKPASS_SLAVES" git fetch origin main
+    UNIQUE_BRANCH="update-workflows-$(date +%Y%m%d-%H%M%S)-$(git rev-parse --short HEAD)"
     git checkout -b "$UNIQUE_BRANCH"
   fi
 
@@ -99,11 +99,18 @@ for REPO in "${SELECTED_REPOS[@]}"; do
     else
       git add .github/workflows/
       git commit -m "Sync workflows from template"
-      GIT_ASKPASS="$GIT_ASKPASS_SLAVES" git push --force-with-lease origin "$UNIQUE_BRANCH"
-      echo "$REPO,$UNIQUE_BRANCH" >> ../updated_repos.txt
+
+      # ✅ If a PR exists, force-push to update the PR
+      if [[ -n "$EXISTING_PR_BRANCH" ]]; then
+        echo "🔄 Updating existing PR with branch '$EXISTING_PR_BRANCH'..."
+        git push --force-with-lease origin "$EXISTING_PR_BRANCH"
+      else
+        echo "🚀 Creating a new branch and pushing changes."
+        git push --force-with-lease origin "$UNIQUE_BRANCH"
+      fi
     fi
   else
-    echo "✔️ No changes detected in $REPO. Skipping PR creation."
+    echo "✔️ No changes detected in $REPO. Skipping PR update."
     if [[ "$DRY_RUN" != "true" ]]; then
       cd ..
       rm -rf "$REPO"
@@ -113,23 +120,10 @@ for REPO in "${SELECTED_REPOS[@]}"; do
 
   export GH_TOKEN="$GH_TOKEN_SLAVES"
 
-  echo "🔍 Checking if label 'sync-workflows' exists in $REPO..."
-  LABEL_EXISTS=$(gh api "repos/$ORG_SLAVES/$REPO/labels" --jq '.[] | select(.name == "sync-workflows") | .name')
-
-  if [[ -z "$LABEL_EXISTS" ]]; then
-    echo "⚠️ Label 'sync-workflows' not found in $REPO. Creating it..."
-    if [[ "$DRY_RUN" == "true" ]]; then
-      echo "🟡 [DRY_RUN] Would have created label 'sync-workflows' in $REPO"
-    else
-      gh api "repos/$ORG_SLAVES/$REPO/labels" \
-        --method POST \
-        --field name="sync-workflows" \
-        --field color="0075ca" \
-        --field description="Automatically synced workflow updates"
-      echo "✅ Label 'sync-workflows' created in $REPO."
-    fi
-  else
-    echo "✅ Label 'sync-workflows' already exists in $REPO."
+  # ✅ If a PR already exists, skip PR creation
+  if [[ -n "$EXISTING_PR_BRANCH" ]]; then
+    echo "✅ PR for branch '$EXISTING_PR_BRANCH' is already open. Updated the branch."
+    continue
   fi
 
   echo "🔄 Creating Pull Request for $REPO..."
