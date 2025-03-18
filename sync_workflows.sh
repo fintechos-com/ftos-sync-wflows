@@ -128,10 +128,12 @@ for REPO in "${SELECTED_REPOS[@]}"; do
       # ✅ If a PR exists, force-push to update the PR
       if [[ -n "$EXISTING_PR_BRANCH" ]]; then
         echo "🔄 Updating existing PR with branch '$EXISTING_PR_BRANCH'..."
-        git push --force-with-lease origin "$EXISTING_PR_BRANCH"
+        #git push --force-with-lease origin "$EXISTING_PR_BRANCH"
+        GIT_ASKPASS="$GIT_ASKPASS_SLAVES" git push --force-with-lease "https://$GH_TOKEN_SLAVES@github.com/$ORG_SLAVES/$REPO.git" "$EXISTING_PR_BRANCH"
       else
         echo "🚀 Creating a new branch and pushing changes."
-        git push --force-with-lease origin "$UNIQUE_BRANCH"
+        #git push --force-with-lease origin "$UNIQUE_BRANCH"
+        GIT_ASKPASS="$GIT_ASKPASS_SLAVES" git push --force-with-lease "https://$GH_TOKEN_SLAVES@github.com/$ORG_SLAVES/$REPO.git" "$UNIQUE_BRANCH"
       fi
     fi
   else
