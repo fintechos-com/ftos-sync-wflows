@@ -77,7 +77,17 @@ for REPO in "${SELECTED_REPOS[@]}"; do
   mkdir -p .github/workflows/
 
   echo "Checking ignored YAML files..."
-  for FILE in ../template-repo/.github/workflows/*.yaml; do
+  # ✅ Ensure the template repository has workflows before copying
+  if [[ ! -d "../template-repo/.github/workflows" || -z "$(ls -A ../template-repo/.github/workflows/*.{yaml,yml} 2>/dev/null)" ]]; then
+    echo "❌ No workflow files (.yaml or .yml) found in template repository. Skipping sync for $REPO."
+    if [[ "$DRY_RUN" != "true" ]]; then
+      cd ..
+      rm -rf "$REPO"
+    fi
+    continue
+  fi
+
+  for FILE in ../template-repo/.github/workflows/*.{yaml,yml}; do
     FILE_NAME=$(basename "$FILE")
     echo "Comparing $FILE_NAME with ignored files: ${IGNORED_FILES_ARRAY[*]}"
 
