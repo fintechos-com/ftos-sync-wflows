@@ -88,6 +88,8 @@ for REPO in "${SELECTED_REPOS[@]}"; do
   fi
 
   for FILE in ../template-repo/.github/workflows/*.{yaml,yml}; do
+    [[ -e "$FILE" ]] || continue  # Skip if no matching files exist
+  
     FILE_NAME=$(basename "$FILE")
     echo "Comparing $FILE_NAME with ignored files: ${IGNORED_FILES_ARRAY[*]}"
 
